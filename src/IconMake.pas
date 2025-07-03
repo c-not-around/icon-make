@@ -40,6 +40,16 @@ var
 
 
 {$region Utils}
+function ImageLoad(fname: string): Bitmap;
+begin
+  result := nil;
+  try
+    result := new Bitmap(fname);
+  except on ex: Exception do
+    MessageBox.Show(String.Format('Load file "{0}" error: {1}', fname, ex.Message), 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
+  end;
+end;
+
 function ImageScale(img: Bitmap; width: integer): Bitmap;
 begin
   result := new Bitmap(width, width);
@@ -114,6 +124,14 @@ begin
   
   &File.WriteAllBytes(fname, data);
 end;
+
+procedure Bitmap.DoTransparent(key: Color);
+begin
+  for var x := 0 to self.Width-1 do
+    for var y := 0 to self.Height-1 do
+      if self.GetPixel(x, y) = key then
+        self.SetPixel(x, y, Color.FromArgb($00, $00, $00, $00));
+end;
 {$endregion}
 
 {$region Handlers}
@@ -149,7 +167,7 @@ begin
   
   if dialog.ShowDialog() = DialogResult.OK then
     begin
-      ColorSelect.ForeColor := dialog.Color;
+      ColorSelect.ForeColor := Color.FromArgb($FF, dialog.Color.R, dialog.Color.G, dialog.Color.B);
       ColorSelect.Text      := String.Format('#{0:X2}{1:X2}{2:X2}', dialog.Color.R, dialog.Color.G, dialog.Color.B);
     end;
 end;
@@ -159,9 +177,9 @@ begin
   var dialog         := new OpenFileDialog();
   dialog.Title       := 'Select image source file';
   dialog.Multiselect := BySources.Checked;
-  dialog.Filter      := 'Portable Network Graphics (*.png)|*.png|'
-                        'Windows Bitmap (*.bmp)|*.bmp|'
-                        'Photo Picture (*.jpg;*.jpeg)|*.jpg;*.jpeg|'
+  dialog.Filter      := 'Portable Network Graphics (*.png)|*.png|'   +
+                        'Windows Bitmap (*.bmp)|*.bmp|'              +
+                        'Photo Picture (*.jpg;*.jpeg)|*.jpg;*.jpeg|' +
                         'Graphics Interchange (*.gif)|*.gif';
   dialog.FilterIndex := 0;
   
@@ -192,24 +210,26 @@ begin
               frames := new Bitmap[Sources.Items.Count];
               for var i := 0 to Sources.Items.Count-1 do
                 begin
-                  var fname := Sources.Items[i].ToString();
-                  try
-                    frames[i] := new Bitmap(fname);
-                  except on ex: Exception do
-                    MessageBox.Show(String.Format('Load file "{0}" error: {1}', fname, ex.Message), 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
-                  end;
+                  frames[i] := ImageLoad(Sources.Items[i].ToString());
+                  
+                  if frames[i] = nil then
+                    exit;
                 end;
+              
+              if ColorEnable.Checked then
+                for var i := 0 to frames.Length-1 do
+                  frames[i].DoTransparent(ColorSelect.ForeColor);
             end
           else
             begin
-              var fname := Sources.Items[0].ToString();
-              var src   : Bitmap;
-              try
-                src := new Bitmap(fname);
-              except on ex: Exception do
-                MessageBox.Show(String.Format('Load file "{0}" error: {1}', fname, ex.Message), 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
-              end;
-               
+              var src := ImageLoad(Sources.Items[0].ToString());
+              
+              if src = nil then
+                exit;
+              
+              if ColorEnable.Checked then
+                src.DoTransparent(ColorSelect.ForeColor);
+              
               var count := Convert.ToInt32(FrameSize.Sum(cb->cb.Checked?1:0));
               if count > 0 then
                 begin
@@ -227,29 +247,16 @@ begin
                 MessageBox.Show('Not selected frame sizes.', 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
             end;
           
-          if ColorEnable.Checked then
-            begin
-              var tc := ColorSelect.ForeColor;
-              
-              for var i := 0 to frames.Length-1 do
-                begin
-                  for var x := 0 to frames[i].Width-1 do
-                    for var y := 0 to frames[i].Height-1 do
-                      if frames[i].GetPixel(x, y) = tc then
-                        frames[i].SetPixel(x, y, Color.FromArgb($00, tc.R, tc.G, tc.B));
-                end;
-            end;
-          
           IconBuild(dialog.FileName, frames);
           
-          if &File.Exists('rc.exe') and &File.Exists('rcdll.dll') then
+          (*if &File.Exists('rc.exe') and &File.Exists('rcdll.dll') then
             begin
               var fi := new FileInfo(dialog.FileName);
               
               &File.WriteAllText(fi.DirectoryName+'\res.rc', 'MAINICON ICON "'+fi.Name+'"');
               
               Process.Start('rc.exe', fi.DirectoryName+'\res.rc');
-            end;
+            end;*)
         end
       else
         MessageBox.Show('Not selected image source files.', 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -340,7 +347,7 @@ begin
   ColorSelect.TextAlign   := ContentAlignment.MiddleCenter;
   ColorSelect.Text        := '#FF0000';
   ColorSelect.BackColor   := Color.White;
-  ColorSelect.ForeColor   := Color.Red;
+  ColorSelect.ForeColor   := Color.FromArgb($FF, $FF, $00, $00);
   ColorSelect.Cursor      := Cursors.Hand;
   ColorSelect.Click       += ColorSelectClick;
   SettingsBox.Controls.Add(ColorSelect);
@@ -369,6 +376,14 @@ begin
   {$endregion}
   
   {$region RunApp}
+  begin
+    var args := Environment.GetCommandLineArgs();
+    
+    if args.Length > 1 then
+      for var i := 1 to args.Length-1 do
+        Sources.Items.Add(args[i].Trim('"'));
+  end;
+  
   Application.EnableVisualStyles();
   Application.Run(Main);
   {$endregion}
