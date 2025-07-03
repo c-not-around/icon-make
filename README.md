@@ -14,6 +14,4 @@ A tool for creating multi-page image files in the format Windows Icon `.ico`
 
 * If you need to make any color transparent, then check the “Transparent color” option and in the field below select which color is considered transparent
 
-* Click the "Icon" button and select a location to save the output `.ico` file. The following files will be created along with the icon file:
-  - `.rc` - resource script
-  - `.res` - compiled resource
+* Click the "Icon" button and select a location to save the output `.ico` file.
