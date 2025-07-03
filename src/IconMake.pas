@@ -1,12 +1,12 @@
 ﻿{$apptype windows}
 
-{$reference 'System.Drawing.dll'}
-{$reference 'System.Windows.Forms.dll'}
+{$reference System.Drawing.dll}
+{$reference System.Windows.Forms.dll}
 
-{$resource 'res\icon.ico'}
-{$resource 'res\clear.png'}
-{$resource 'res\add.png'}
-{$resource 'res\compile.png'}
+{$resource res\icon.ico}
+{$resource res\clear.png}
+{$resource res\add.png}
+{$resource res\compile.png}
 
 {$mainresource res\res.res}
 
@@ -18,10 +18,6 @@ uses
   System.Drawing,
   System.Drawing.Drawing2D,
   System.Windows.Forms;
-
-
-type
-  FileNames = array of string;
 
 
 var
@@ -135,23 +131,6 @@ end;
 {$endregion}
 
 {$region Handlers}
-procedure SourcesClearClick(sender: object; e: EventArgs);
-begin
-  Sources.Items.Clear();
-end;
-
-procedure SourcesDragEnter(sender: object; e: DragEventArgs);
-begin
-  e.Effect := DragDropEffects.All;
-end;
-
-procedure SourcesDragDrop(sender: object; e: DragEventArgs);
-begin
-  var files := FileNames(e.Data.GetData(DataFormats.FileDrop));
-  for var i := 0 to files.Length-1 do
-    Sources.Items.Add(files[i]);
-end;
-
 procedure SettingsRadioButtonCheckedChanged(sender: object; e: EventArgs);
 begin
   FrameSizeBox.Enabled := ByScaling.Checked;
@@ -285,7 +264,7 @@ begin
   var SourcesClear   := new ToolStripMenuItem();
   SourcesClear.Text  := 'Clear'; 
   SourcesClear.Image := Image.FromStream(System.Reflection.Assembly.GetEntryAssembly().GetManifestResourceStream('clear.png'));
-  SourcesClear.Click += SourcesClearClick;
+  SourcesClear.Click += (sender, e) -> begin Sources.Items.Clear(); end;
   SourcesMenu.Items.Add(SourcesClear);
   
   Sources                  := new ListBox();
@@ -294,8 +273,13 @@ begin
   Sources.Anchor           := AnchorStyles.Left or AnchorStyles.Top or AnchorStyles.Right or AnchorStyles.Bottom;
   Sources.ContextMenuStrip := SourcesMenu;
   Sources.AllowDrop        := true;
-  Sources.DragEnter        += SourcesDragEnter;
-  Sources.DragDrop         += SourcesDragDrop;
+  Sources.DragEnter        += (sender, e) -> begin e.Effect := DragDropEffects.All; end;
+  Sources.DragDrop         += (sender, e) ->
+    begin
+      var files := e.Data.GetData(DataFormats.FileDrop) as array of string;
+      for var i := 0 to files.Length-1 do
+        Sources.Items.Add(files[i]);
+    end;
   Main.Controls.Add(Sources);
   {$endregion}
   
