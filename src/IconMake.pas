@@ -13,11 +13,11 @@
 
 uses
   System,
+  System.IO,
+  System.Diagnostics,
   System.Drawing,
   System.Drawing.Drawing2D,
-  System.Windows.Forms,
-  System.IO,
-  System.Diagnostics;
+  System.Windows.Forms;
 
 
 type
@@ -46,7 +46,7 @@ begin
   try
     result := new Bitmap(fname);
   except on ex: Exception do
-    MessageBox.Show(String.Format('Load file "{0}" error: {1}', fname, ex.Message), 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
+    MessageBox.Show($'Load file "{fname}" error: {ex.Message}', 'Error', MessageBoxButtons.OK, MessageBoxIcon.Error);
   end;
 end;
 
@@ -168,7 +168,7 @@ begin
   if dialog.ShowDialog() = DialogResult.OK then
     begin
       ColorSelect.ForeColor := Color.FromArgb($FF, dialog.Color.R, dialog.Color.G, dialog.Color.B);
-      ColorSelect.Text      := String.Format('#{0:X2}{1:X2}{2:X2}', dialog.Color.R, dialog.Color.G, dialog.Color.B);
+      ColorSelect.Text      := $'#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}';
     end;
 end;
 
@@ -265,6 +265,11 @@ end;
 {$endregion}
 
 begin
+  {$region App}
+  Application.EnableVisualStyles();
+  Application.SetCompatibleTextRenderingDefault(false);
+  {$endregion}
+  
   {$region MainForm}
   Main               := new Form();
   Main.Size          := new Size(510, 260);
@@ -334,7 +339,7 @@ begin
     end;
   
   ColorEnable          := new CheckBox();
-  ColorEnable.Size     := new Size(170, 15);
+  ColorEnable.Size     := new Size(170, 19);
   ColorEnable.Location := new Point(5, 130);
   ColorEnable.Text     := 'Transparent color';
   SettingsBox.Controls.Add(ColorEnable);
@@ -375,7 +380,7 @@ begin
   Main.Controls.Add(MakeIcon);
   {$endregion}
   
-  {$region RunApp}
+  {$region App}
   begin
     var args := Environment.GetCommandLineArgs();
     
@@ -384,7 +389,6 @@ begin
         Sources.Items.Add(args[i].Trim('"'));
   end;
   
-  Application.EnableVisualStyles();
   Application.Run(Main);
   {$endregion}
 end.
